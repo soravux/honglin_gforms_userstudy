@@ -7,17 +7,18 @@ from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
+from google.oauth2 import service_account
 
 SCOPES = [
     'https://www.googleapis.com/auth/forms.body',
     'https://www.googleapis.com/auth/drive.file',
 ]
 FORM_ID = '1h_uxEBPYfqamCLNBkALTvYDJzXUOCEzR3YDVyvfgy2M'
-IMAGE_DIR = './user_study'
+IMAGE_DIR = '../data/user_study_images'
 
 QUESTIONS = [
     'Which set of poses appears more anatomically plausible and natural for the given human or animal mesh?',
-    'Which set of poses is more diverse, with a larger range of different poses?',
+    'Which set of poses is more diverse, with a larger range of different poses? Ignore completely unrecognizable poses.',
 ]
 CHOICES = [{'value': 'Method A'}, {'value': 'Method B'}]
 
@@ -33,16 +34,17 @@ def get_credentials():
         else:
             flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
             creds = flow.run_local_server(port=0)
+            # creds = service_account.Credentials.from_service_account_file('credentials.json', scopes=SCOPES)
         with open('token.pickle', 'wb') as f:
             pickle.dump(creds, f)
     return creds
 
 
 def discover_images(directory):
-    """Find all question*.jpg files and return them sorted numerically."""
-    paths = glob.glob(os.path.join(directory, 'question*.jpg'))
+    """Find all question images and return them sorted numerically."""
+    paths = glob.glob(os.path.join(directory, 'question_*.jpg'))
     def sort_key(p):
-        m = re.search(r'question(\d+)', os.path.basename(p))
+        m = re.search(r'question_(\d+)_', os.path.basename(p))
         return int(m.group(1)) if m else 0
     return sorted(paths, key=sort_key)
 

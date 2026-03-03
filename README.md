@@ -26,6 +26,20 @@ python make_question.py <folder1> <folder2> [--grid-size 5x3] [--tpose-size 40] 
 
 This produces a `<folder1>_vs_<folder2>.jpg` in the parent directory of `folder1`.
 
+For full-batch generation from a structured results tree (`group/subgroup/method/sample`), use:
+
+```bash
+python make_questions.py <root_folder> <output_folder> [--manifest comparisons.json] [--methods Vips,MethodA,MethodB] [--sample-names sample_001,sample_014]
+```
+
+This will:
+- Scan all methods/samples under `root_folder`
+- Optionally restrict to a comma-separated method list via `--methods` (must include `Vips`)
+- Optionally restrict to a comma-separated sample list via `--sample-names`
+- Build all `Vips` vs baseline comparisons where both exist
+- Generate one comparison image per pair in `output_folder`
+- Write a JSON manifest (`comparisons.json` by default)
+
 ### 2. Move images into `./user_study/`
 
 Rename/move the generated images so they follow the `question{id}.jpg` naming convention:
