@@ -6,14 +6,6 @@
 pip install numpy Pillow google-auth google-auth-oauthlib google-api-python-client
 ```
 
-| Package | Used by |
-|---|---|
-| `numpy` | `make_grid.py`, `make_question.py` |
-| `Pillow` | `make_grid.py`, `make_question.py` |
-| `google-auth` | `update_form.py` |
-| `google-auth-oauthlib` | `update_form.py` |
-| `google-api-python-client` | `update_form.py` |
-
 ## Quickstart
 
 ### 1. Generate question images
