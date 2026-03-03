@@ -61,23 +61,6 @@ def create_comparison_image(
         imgs1, crop_box1, cell_size1, grid_rows, grid_cols, equalize
     )
 
-    tpose_path = get_tpose_image(folder1)
-    if tpose_path is None:
-        raise ValueError(f"No *_tpose* image found in {folder1}")
-    tpose_cropped = crop_single(tpose_path, crop_box1)
-    grid_h = grid1.size[1]
-    tw, th = tpose_cropped.size
-    scale_full = grid_h / th
-    scale = (tpose_size / 100.0) * scale_full
-    new_w = round(tw * scale)
-    new_h = round(th * scale)
-    tpose_resized = tpose_cropped.resize((new_w, new_h), Image.LANCZOS)
-    if equalize:
-        tpose_resized = equalize_lightness(tpose_resized)
-    tpose_y = int((tpose_vertical / 100.0) * (grid_h - new_h))
-    tpose_column = Image.new("RGB", (new_w, grid_h), (255, 255, 255))
-    tpose_column.paste(tpose_resized, (0, tpose_y))
-
     imgs2 = get_eligible_images(folder2)
     if not imgs2:
         raise ValueError(f"No eligible images in {folder2}")
@@ -86,9 +69,26 @@ def create_comparison_image(
         imgs2, crop_box2, cell_size2, grid_rows, grid_cols, equalize
     )
 
+    content_h = max(grid1.size[1], grid2.size[1])
+
+    tpose_path = get_tpose_image(folder1)
+    if tpose_path is None:
+        raise ValueError(f"No *_tpose* image found in {folder1}")
+    tpose_cropped = crop_single(tpose_path, crop_box1)
+    tw, th = tpose_cropped.size
+    scale_full = content_h / th
+    scale = (tpose_size / 100.0) * scale_full
+    new_w = round(tw * scale)
+    new_h = round(th * scale)
+    tpose_resized = tpose_cropped.resize((new_w, new_h), Image.LANCZOS)
+    if equalize:
+        tpose_resized = equalize_lightness(tpose_resized)
+    tpose_y = int((tpose_vertical / 100.0) * (content_h - new_h))
+    tpose_column = Image.new("RGB", (new_w, content_h), (255, 255, 255))
+    tpose_column.paste(tpose_resized, (0, tpose_y))
+
     w1, w_tpose, w2 = grid1.size[0], tpose_column.size[0], grid2.size[0]
     total_w = w1 + w_tpose + w2
-    content_h = grid_h
 
     font = None
     for path in (
@@ -116,9 +116,11 @@ def create_comparison_image(
 
     result_h = label_h + content_h
     result = Image.new("RGB", (total_w, result_h), (255, 255, 255))
-    result.paste(grid1, (0, label_h))
+    grid1_y = label_h + (content_h - grid1.size[1]) // 2
+    grid2_y = label_h + (content_h - grid2.size[1]) // 2
+    result.paste(grid1, (0, grid1_y))
     result.paste(tpose_column, (w1, label_h))
-    result.paste(grid2, (w1 + w_tpose, label_h))
+    result.paste(grid2, (w1 + w_tpose, grid2_y))
 
     draw = ImageDraw.Draw(result)
     if not skip_text:

@@ -55,40 +55,61 @@ CellSize = tuple[int, int]
 def compute_crop_params(
     image_paths: list[Path], padding: int
 ) -> tuple[CropBox, CellSize]:
-    """Scan all images and return the union crop box and resulting cell size.
+    """Scan all images and return a normalized union crop box and cell size.
+
+    The returned ``crop_box`` is expressed in normalized coordinates [0, 1]
+    relative to each border-discarded image's width/height.
 
     Returns
     -------
-    crop_box : (x_min, y_min, x_max, y_max) in the border-discarded coordinate space.
-    cell_size : (width, height) of each cropped cell.
+    crop_box : (x_min, y_min, x_max, y_max) as normalized floats.
+    cell_size : (width, height) integer target size used for grid cells.
     """
-    bboxes: list[tuple[int, int, int, int]] = []
-    inner_size: tuple[int, int] | None = None
+    norm_bboxes: list[tuple[float, float, float, float]] = []
+    max_inner_w = 0
+    max_inner_h = 0
 
     for path in image_paths:
         inner = discard_border(load_image(path))
-        if inner_size is None:
-            inner_size = inner.size
+        w, h = inner.size
+        max_inner_w = max(max_inner_w, w)
+        max_inner_h = max(max_inner_h, h)
         bbox = find_object_bbox(np.array(inner))
-        if bbox is not None:
-            bboxes.append(bbox)
+        if bbox is None:
+            continue
+        x_min, y_min, x_max, y_max = bbox
+        norm_bboxes.append((x_min / w, y_min / h, (x_max + 1) / w, (y_max + 1) / h))
 
-    if not bboxes or inner_size is None:
+    if not norm_bboxes or max_inner_w == 0 or max_inner_h == 0:
         raise ValueError("No objects detected in any image.")
 
-    ux_min = max(0, min(b[0] for b in bboxes) - padding)
-    uy_min = max(0, min(b[1] for b in bboxes) - padding)
-    ux_max = min(inner_size[0], max(b[2] for b in bboxes) + 1 + padding)
-    uy_max = min(inner_size[1], max(b[3] for b in bboxes) + 1 + padding)
+    pad_x = padding / max_inner_w
+    pad_y = padding / max_inner_h
+    ux_min = max(0.0, min(b[0] for b in norm_bboxes) - pad_x)
+    uy_min = max(0.0, min(b[1] for b in norm_bboxes) - pad_y)
+    ux_max = min(1.0, max(b[2] for b in norm_bboxes) + pad_x)
+    uy_max = min(1.0, max(b[3] for b in norm_bboxes) + pad_y)
 
     crop_box: CropBox = (ux_min, uy_min, ux_max, uy_max)
-    cell_size: CellSize = (ux_max - ux_min, uy_max - uy_min)
+    cell_size: CellSize = (
+        max(1, int(round((ux_max - ux_min) * max_inner_w))),
+        max(1, int(round((uy_max - uy_min) * max_inner_h))),
+    )
     return crop_box, cell_size
 
 
 def crop_single(path: Path, crop_box: CropBox) -> Image.Image:
-    """Load one image, discard its border, and apply the given crop box."""
-    return discard_border(load_image(path)).crop(crop_box)
+    """Load one image, discard border, apply normalized crop box, resize to cell."""
+    inner = discard_border(load_image(path))
+    w, h = inner.size
+    x0f, y0f, x1f, y1f = crop_box
+
+    x0 = max(0, min(w - 1, int(np.floor(x0f * w))))
+    y0 = max(0, min(h - 1, int(np.floor(y0f * h))))
+    x1 = max(x0 + 1, min(w, int(np.ceil(x1f * w))))
+    y1 = max(y0 + 1, min(h, int(np.ceil(y1f * h))))
+
+    return inner.crop((x0, y0, x1, y1))
 
 
 def build_grid(
@@ -107,6 +128,8 @@ def build_grid(
     )
     for idx, path in enumerate(image_paths):
         cell = crop_single(path, crop_box)
+        if cell.size != cell_size:
+            cell = cell.resize(cell_size, Image.Resampling.LANCZOS)
         row, col = divmod(idx, grid_cols)
         grid_img.paste(cell, (col * cell_w, row * cell_h))
     return grid_img

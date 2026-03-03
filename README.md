@@ -3,7 +3,7 @@
 ## Dependencies
 
 ```bash
-pip install numpy Pillow google-auth google-auth-oauthlib google-api-python-client
+pip install numpy Pillow google-auth google-auth-oauthlib google-api-python-client tqdm choix
 ```
 
 ## Quickstart
