@@ -13,8 +13,12 @@ SCOPES = [
     'https://www.googleapis.com/auth/forms.body',
     'https://www.googleapis.com/auth/drive.file',
 ]
-FORM_ID = '1h_uxEBPYfqamCLNBkALTvYDJzXUOCEzR3YDVyvfgy2M'
-IMAGE_DIR = '../data/user_study_images'
+
+# FORM_ID = '1h_uxEBPYfqamCLNBkALTvYDJzXUOCEzR3YDVyvfgy2M'
+# IMAGE_DIR = '../data/v1/user_study_images'
+
+FORM_ID = '1bqfU9-n-0eGz1W2pVrWConvo3pK8mNp6_yARyPczfPQ'
+IMAGE_DIR = '../data/v2/user_study_images'
 
 QUESTIONS = [
     'Which set of poses appears more anatomically plausible and natural for the given human or animal mesh?',
